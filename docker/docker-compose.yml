@@ -1,0 +1,76 @@
+# OS-APOW Docker Compose
+# Local development environment configuration
+
+services:
+  # === Notifier Service (The Ear) ===
+  notifier:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DEBUG=${DEBUG:-false}
+    command: ["os-apow", "notifier"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - os-apow-network
+    profiles:
+      - notifier
+      - all
+
+  # === Sentinel Service (The Brain) ===
+  sentinel:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_ORG=${GITHUB_ORG}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - SENTINEL_BOT_LOGIN=${SENTINEL_BOT_LOGIN:-}
+      - DEBUG=${DEBUG:-false}
+    command: ["os-apow", "sentinel"]
+    volumes:
+      # Mount scripts for shell bridge access
+      - ../scripts:/app/scripts:ro
+      # Mount for devcontainer operations (requires Docker socket)
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - os-apow-network
+    profiles:
+      - sentinel
+      - all
+
+  # === Development Environment ===
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_ORG=${GITHUB_ORG}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - SENTINEL_BOT_LOGIN=${SENTINEL_BOT_LOGIN:-}
+      - DEBUG=true
+    volumes:
+      - ..:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    command: ["sleep", "infinity"]
+    networks:
+      - os-apow-network
+    profiles:
+      - dev
+
+networks:
+  os-apow-network:
+    driver: bridge
