@@ -9,12 +9,12 @@ See: OS-APOW Plan Review, I-1 / R-3
 """
 
 import re
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     """The kind of work the agent should perform."""
 
     PLAN = "PLAN"
@@ -22,7 +22,7 @@ class TaskType(str, Enum):
     BUGFIX = "BUGFIX"
 
 
-class WorkItemStatus(str, Enum):
+class WorkItemStatus(StrEnum):
     """Maps directly to GitHub Issue labels used as state indicators."""
 
     QUEUED = "agent:queued"

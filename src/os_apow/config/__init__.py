@@ -1,12 +1,18 @@
 """
-OS-APOW Configuration
+OS-APOW Configuration Package
 
 Centralized configuration management using environment variables
 with sensible defaults for MVP.
+
+Includes both dataclass-based config (legacy) and Pydantic settings.
 """
 
 import os
 from dataclasses import dataclass, field
+
+from src.os_apow.config.settings import Settings
+
+__all__ = ["Config", "GitHubConfig", "NotifierConfig", "SentinelConfig", "Settings", "get_config"]
 
 
 @dataclass
@@ -47,9 +53,7 @@ class Config:
     github: GitHubConfig = field(default_factory=GitHubConfig)
     sentinel: SentinelConfig = field(default_factory=SentinelConfig)
     notifier: NotifierConfig = field(default_factory=NotifierConfig)
-    debug: bool = field(
-        default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true"
-    )
+    debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
 
     @classmethod
     def from_env(cls) -> "Config":

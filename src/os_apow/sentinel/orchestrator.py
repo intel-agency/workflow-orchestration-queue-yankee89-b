@@ -12,6 +12,7 @@ This script acts as the 'Brain' of the OS-APOW system. It:
 """
 
 import asyncio
+import contextlib
 import logging
 import random
 import signal
@@ -41,7 +42,7 @@ class Sentinel:
         signal.signal(signal.SIGTERM, self._handle_signal)
         signal.signal(signal.SIGINT, self._handle_signal)
 
-    def _handle_signal(self, signum, frame):
+    def _handle_signal(self, signum, _frame):
         """Set shutdown flag on SIGTERM/SIGINT so the current task can finish."""
         sig_name = signal.Signals(signum).name
         logger.info(f"Received {sig_name} — will shut down after current task finishes")
@@ -146,14 +147,10 @@ class Sentinel:
                     f"Sentinel successfully executed `{workflow}`. "
                     f"Please review Pull Requests."
                 )
-                await self.queue.update_status(
-                    item, WorkItemStatus.SUCCESS, success_msg
-                )
+                await self.queue.update_status(item, WorkItemStatus.SUCCESS, success_msg)
             else:
                 log_tail = (
-                    res_prompt.stderr[-1500:]
-                    if res_prompt.stderr
-                    else "No error output captured."
+                    res_prompt.stderr[-1500:] if res_prompt.stderr else "No error output captured."
                 )
                 fail_msg = f"❌ **Execution Error** during `{workflow}`:\n```\n...{log_tail}\n```"
                 await self.queue.update_status(item, WorkItemStatus.ERROR, fail_msg)
@@ -167,16 +164,12 @@ class Sentinel:
             )
         finally:
             heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await heartbeat_task
-            except asyncio.CancelledError:
-                pass
 
             # Environment reset between tasks — stop container but keep for fast restart
             logger.info("Resetting environment (stop)")
-            await self.run_shell_command(
-                [self.config.shell_bridge_path, "stop"], timeout=60
-            )
+            await self.run_shell_command([self.config.shell_bridge_path, "stop"], timeout=60)
 
     async def run_forever(self):
         """Main polling loop - runs until shutdown is requested."""
@@ -208,9 +201,7 @@ class Sentinel:
                     jitter = random.uniform(0, self._current_backoff * 0.1)
                     wait = min(self._current_backoff + jitter, self.config.max_backoff)
                     logger.warning(f"Rate limited ({status}) — backing off {wait:.0f}s")
-                    self._current_backoff = min(
-                        self._current_backoff * 2, self.config.max_backoff
-                    )
+                    self._current_backoff = min(self._current_backoff * 2, self.config.max_backoff)
                     await asyncio.sleep(wait)
                     continue
                 else:

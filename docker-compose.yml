@@ -1,0 +1,52 @@
+# OS-APOW Docker Compose
+# Local development and deployment configuration
+
+services:
+  # === Sentinel Service (The Brain) ===
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_ORG=${GITHUB_ORG}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - SENTINEL_BOT_LOGIN=${SENTINEL_BOT_LOGIN:-}
+      - DEBUG=${DEBUG:-false}
+    command: ["python", "-m", "src.os_apow.main", "sentinel"]
+    volumes:
+      # Mount scripts for shell bridge access
+      - ./scripts:/app/scripts:ro
+      # Mount for devcontainer operations (requires Docker socket)
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - os-apow-network
+
+  # === Notifier Service (The Ear) ===
+  notifier:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DEBUG=${DEBUG:-false}
+    command: ["python", "-m", "src.os_apow.main", "notifier"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - os-apow-network
+
+networks:
+  os-apow-network:
+    driver: bridge
