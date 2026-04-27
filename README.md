@@ -182,6 +182,10 @@ uv run mypy src/
 - [API Documentation](docs/api/)
 - [ADR-001: GitHub Issues as Work Queue](docs/architecture/001-github-issues-as-queue.md)
 
+## For AI Agents
+
+- [AI Repository Summary](.ai-repository-summary.md) — Concise project overview for AI agents and automated tools.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
